@@ -6,6 +6,7 @@ public class PrintTesting {
 		String text = "API_AUTOMATION_TESTING";
 		System.out.println(text);
 		
+		// Count words by splitting on underscores
 		String[] words = text.split("_");
 		int wordCount = words.length;
 		
