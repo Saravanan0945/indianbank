@@ -8,7 +8,6 @@ public class PrintTesting {
 		
 		String[] words = text.split("_");
 		int wordCount = words.length;
-		
 		System.out.println("Word count: " + wordCount);
 	}
 
