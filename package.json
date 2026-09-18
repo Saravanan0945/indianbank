@@ -1,0 +1,37 @@
+{
+  "name": "indianbank-login-ui",
+  "version": "1.0.0",
+  "description": "UI Login Feature with Test Cases for Indian Bank",
+  "main": "src/main/webapp/js/login.js",
+  "scripts": {
+    "test": "jest --no-colors --verbose",
+    "test:watch": "jest --watch --no-colors",
+    "test:coverage": "jest --coverage --no-colors"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "src/main/webapp/js/login.js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "*.test.js"
+    ]
+  },
+  "keywords": [
+    "login",
+    "authentication",
+    "ui",
+    "testing"
+  ],
+  "author": "Indian Bank Development Team",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
+
