@@ -1,37 +1,38 @@
 {
-  "name": "indianbank-login-ui",
+  "name": "indian-bank-login",
   "version": "1.0.0",
-  "description": "UI Login Feature with Test Cases for Indian Bank",
+  "description": "Indian Bank Login Page with comprehensive test suite",
   "main": "src/main/webapp/js/login.js",
   "scripts": {
-    "test": "jest --no-colors --verbose",
-    "test:watch": "jest --watch --no-colors",
-    "test:coverage": "jest --coverage --no-colors"
-  },
-  "jest": {
-    "testEnvironment": "jsdom",
-    "testMatch": [
-      "**/*.test.js"
-    ],
-    "collectCoverageFrom": [
-      "src/main/webapp/js/login.js"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "*.test.js"
-    ]
+    "test": "jest --verbose --coverage",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --coverageReporters=text --coverageReporters=html"
   },
   "keywords": [
     "login",
     "authentication",
-    "ui",
-    "testing"
+    "banking",
+    "indian-bank"
   ],
   "author": "Indian Bank Development Team",
   "license": "ISC",
   "devDependencies": {
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/main/webapp/js/**/*.js",
+      "!src/main/webapp/js/**/*.test.js"
+    ],
+    "testMatch": [
+      "**/src/main/webapp/js/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [],
+    "verbose": true
   }
 }
 

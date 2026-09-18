@@ -1,425 +1,926 @@
 /**
  * Login Page JavaScript
- * Handles form validation, submission, and UI interactions
+ * Handles user authentication, form validation, and session management
  */
 
-// Configuration
+// ============================================================================
+// CONFIGURATION AND CONSTANTS
+// ============================================================================
+
 const CONFIG = {
-  MIN_PASSWORD_LENGTH: 6,
-  MAX_USERNAME_LENGTH: 50,
-  MAX_PASSWORD_LENGTH: 128,
-  API_TIMEOUT: 3000,
-  REMEMBER_ME_KEY: 'rememberedUsername',
-  EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-};
-
-// DOM Elements
-let elements = {};
-
-// State
-const state = {
-  isSubmitting: false,
-  validationErrors: {}
-};
-
-/**
- * Initialize the application when DOM is ready
- */
-document.addEventListener('DOMContentLoaded', () => {
-  initializeElements();
-  initializeEventListeners();
-  loadRememberedUsername();
-});
-
-/**
- * Cache DOM elements for better performance
- */
-function initializeElements() {
-  elements = {
-    form: document.getElementById('loginForm'),
-    usernameInput: document.getElementById('username'),
-    passwordInput: document.getElementById('password'),
-    loginBtn: document.getElementById('loginBtn'),
-    errorMessage: document.getElementById('errorMessage'),
-    successMessage: document.getElementById('successMessage'),
-    loadingSpinner: document.getElementById('loadingSpinner'),
-    usernameError: document.getElementById('usernameError'),
-    passwordError: document.getElementById('passwordError'),
-    passwordToggle: document.getElementById('passwordToggle'),
-    rememberMeCheckbox: document.getElementById('rememberMe')
-  };
-}
-
-/**
- * Set up all event listeners
- */
-function initializeEventListeners() {
-  // Form submission
-  elements.form.addEventListener('submit', handleFormSubmit);
-
-  // Real-time validation
-  elements.usernameInput.addEventListener('blur', () => validateField('username'));
-  elements.passwordInput.addEventListener('blur', () => validateField('password'));
-
-  // Clear errors on input
-  elements.usernameInput.addEventListener('input', () => clearFieldError('username'));
-  elements.passwordInput.addEventListener('input', () => clearFieldError('password'));
-
-  // Password visibility toggle
-  elements.passwordToggle.addEventListener('click', togglePasswordVisibility);
-
-  // Keyboard accessibility for password toggle
-  elements.passwordToggle.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      togglePasswordVisibility();
+    // Validation rules
+    MIN_PASSWORD_LENGTH: 6,
+    MAX_PASSWORD_LENGTH: 128,
+    MAX_USERNAME_LENGTH: 50,
+    
+    // Email validation regex (RFC 5322 simplified)
+    EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    
+    // API endpoints (update these with your actual backend URLs)
+    API_ENDPOINTS: {
+        LOGIN: '/api/auth/login',
+        LOGOUT: '/api/auth/logout',
+        REFRESH: '/api/auth/refresh'
+    },
+    
+    // Redirect URLs
+    REDIRECT_URLS: {
+        SUCCESS: '/dashboard.html',
+        LOGOUT: '/login.html'
+    },
+    
+    // Rate limiting
+    MAX_LOGIN_ATTEMPTS: 5,
+    RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes in milliseconds
+    
+    // Timeouts
+    API_TIMEOUT: 30000, // 30 seconds
+    SUCCESS_MESSAGE_DURATION: 2000, // 2 seconds
+    
+    // Session storage keys
+    STORAGE_KEYS: {
+        AUTH_TOKEN: 'auth_token',
+        REFRESH_TOKEN: 'refresh_token',
+        USER_DATA: 'user_data',
+        REMEMBER_ME: 'remember_me',
+        LOGIN_ATTEMPTS: 'login_attempts',
+        LAST_ATTEMPT_TIME: 'last_attempt_time'
     }
-  });
-}
+};
+
+// ============================================================================
+// STATE MANAGEMENT
+// ============================================================================
+
+let isSubmitting = false;
+let loginAttempts = 0;
+let lastAttemptTime = 0;
+
+// DOM Elements (will be initialized on DOMContentLoaded)
+let elements = {
+    loginForm: null,
+    usernameInput: null,
+    passwordInput: null,
+    loginBtn: null,
+    loadingSpinner: null,
+    errorMessage: null,
+    successMessage: null,
+    usernameError: null,
+    passwordError: null,
+    togglePassword: null,
+    rememberMe: null
+};
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
 
 /**
- * Handle form submission
- * @param {Event} event - Form submit event
+ * Initialize rate limiting data from localStorage
  */
-async function handleFormSubmit(event) {
-  event.preventDefault();
+function initializeRateLimiting() {
+    const storedAttempts = localStorage.getItem(CONFIG.STORAGE_KEYS.LOGIN_ATTEMPTS);
+    const storedTime = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_ATTEMPT_TIME);
+    
+    if (storedAttempts && storedTime) {
+        const timeDiff = Date.now() - parseInt(storedTime);
+        
+        // Reset if outside the rate limit window
+        if (timeDiff > CONFIG.RATE_LIMIT_WINDOW) {
+            loginAttempts = 0;
+            lastAttemptTime = 0;
+            localStorage.removeItem(CONFIG.STORAGE_KEYS.LOGIN_ATTEMPTS);
+            localStorage.removeItem(CONFIG.STORAGE_KEYS.LAST_ATTEMPT_TIME);
+        } else {
+            loginAttempts = parseInt(storedAttempts);
+            lastAttemptTime = parseInt(storedTime);
+        }
+    }
+}
 
-  // Prevent double submission
-  if (state.isSubmitting) {
-    return;
-  }
 
-  // Clear previous messages
-  hideMessages();
 
-  // Validate all fields
-  const isValid = validateForm();
+// ============================================================================
+// VALIDATION FUNCTIONS
+// ============================================================================
 
-  if (!isValid) {
-    showError('Please correct the errors before submitting.');
-    return;
-  }
-
-  // Get form data
-  const formData = {
-    username: elements.usernameInput.value.trim(),
-    password: elements.passwordInput.value,
-    rememberMe: elements.rememberMeCheckbox.checked
-  };
-
-  // Submit the form
-  await submitLogin(formData);
+/**
+ * Validate email format using regex pattern
+ * @param {string} email - Email address to validate
+ * @returns {Object} - { isValid: boolean, message: string }
+ */
+function validateEmail(email) {
+    if (!email || email.trim() === '') {
+        return {
+            isValid: false,
+            message: 'Email or username is required'
+        };
+    }
+    
+    const trimmedEmail = email.trim();
+    
+    if (trimmedEmail.length > CONFIG.MAX_USERNAME_LENGTH) {
+        return {
+            isValid: false,
+            message: `Username must not exceed ${CONFIG.MAX_USERNAME_LENGTH} characters`
+        };
+    }
+    
+    // Check if it's an email format (if contains @)
+    if (trimmedEmail.includes('@')) {
+        if (!CONFIG.EMAIL_REGEX.test(trimmedEmail)) {
+            return {
+                isValid: false,
+                message: 'Please enter a valid email address'
+            };
+        }
+    }
+    
+    return {
+        isValid: true,
+        message: ''
+    };
 }
 
 /**
- * Validate the entire form
- * @returns {boolean} - True if form is valid
+ * Validate password meets minimum requirements
+ * @param {string} password - Password to validate
+ * @returns {Object} - { isValid: boolean, message: string }
+ */
+function validatePassword(password) {
+    if (!password || password === '') {
+        return {
+            isValid: false,
+            message: 'Password is required'
+        };
+    }
+    
+    if (password.length < CONFIG.MIN_PASSWORD_LENGTH) {
+        return {
+            isValid: false,
+            message: `Password must be at least ${CONFIG.MIN_PASSWORD_LENGTH} characters long`
+        };
+    }
+    
+    if (password.length > CONFIG.MAX_PASSWORD_LENGTH) {
+        return {
+            isValid: false,
+            message: `Password must not exceed ${CONFIG.MAX_PASSWORD_LENGTH} characters`
+        };
+    }
+    
+    return {
+        isValid: true,
+        message: ''
+    };
+}
+
+/**
+ * Validate all form fields before submission
+ * @returns {Object} - { isValid: boolean, errors: Object }
  */
 function validateForm() {
-  const usernameValid = validateField('username');
-  const passwordValid = validateField('password');
-
-  return usernameValid && passwordValid;
+    const username = elements.usernameInput.value;
+    const password = elements.passwordInput.value;
+    
+    const usernameValidation = validateEmail(username);
+    const passwordValidation = validatePassword(password);
+    
+    const errors = {
+        username: usernameValidation.message,
+        password: passwordValidation.message
+    };
+    
+    const isValid = usernameValidation.isValid && passwordValidation.isValid;
+    
+    return {
+        isValid,
+        errors
+    };
 }
 
 /**
- * Validate a specific field
+ * Validate individual field on blur
  * @param {string} fieldName - Name of the field to validate
- * @returns {boolean} - True if field is valid
  */
 function validateField(fieldName) {
-  let isValid = true;
-  let errorMessage = '';
-
-  if (fieldName === 'username') {
-    const username = elements.usernameInput.value.trim();
-
-    if (!username) {
-      isValid = false;
-      errorMessage = 'Username or email is required.';
-    } else if (username.length > CONFIG.MAX_USERNAME_LENGTH) {
-      isValid = false;
-      errorMessage = `Username must not exceed ${CONFIG.MAX_USERNAME_LENGTH} characters.`;
-    } else if (username.includes('@') && !CONFIG.EMAIL_REGEX.test(username)) {
-      isValid = false;
-      errorMessage = 'Please enter a valid email address.';
+    let validation;
+    
+    if (fieldName === 'username') {
+        validation = validateEmail(elements.usernameInput.value);
+        updateFieldError('username', validation.message);
+    } else if (fieldName === 'password') {
+        validation = validatePassword(elements.passwordInput.value);
+        updateFieldError('password', validation.message);
     }
-
-    if (!isValid) {
-      showFieldError('username', errorMessage);
-      elements.usernameInput.classList.add('error');
-    } else {
-      clearFieldError('username');
-      elements.usernameInput.classList.remove('error');
-    }
-  }
-
-  if (fieldName === 'password') {
-    const password = elements.passwordInput.value;
-
-    if (!password) {
-      isValid = false;
-      errorMessage = 'Password is required.';
-    } else if (password.length < CONFIG.MIN_PASSWORD_LENGTH) {
-      isValid = false;
-      errorMessage = `Password must be at least ${CONFIG.MIN_PASSWORD_LENGTH} characters.`;
-    } else if (password.length > CONFIG.MAX_PASSWORD_LENGTH) {
-      isValid = false;
-      errorMessage = `Password must not exceed ${CONFIG.MAX_PASSWORD_LENGTH} characters.`;
-    }
-
-    if (!isValid) {
-      showFieldError('password', errorMessage);
-      elements.passwordInput.classList.add('error');
-    } else {
-      clearFieldError('password');
-      elements.passwordInput.classList.remove('error');
-    }
-  }
-
-  state.validationErrors[fieldName] = !isValid;
-  return isValid;
 }
 
-/**
- * Show field-specific error message
- * @param {string} fieldName - Name of the field
- * @param {string} message - Error message to display
- */
-function showFieldError(fieldName, message) {
-  const errorElement = elements[`${fieldName}Error`];
-  if (errorElement) {
-    errorElement.textContent = message;
-    errorElement.classList.add('show');
-  }
-}
+
+
+// ============================================================================
+// UI FEEDBACK FUNCTIONS
+// ============================================================================
 
 /**
- * Clear field-specific error message
- * @param {string} fieldName - Name of the field
- */
-function clearFieldError(fieldName) {
-  const errorElement = elements[`${fieldName}Error`];
-  if (errorElement) {
-    errorElement.textContent = '';
-    errorElement.classList.remove('show');
-  }
-
-  const inputElement = elements[`${fieldName}Input`];
-  if (inputElement) {
-    inputElement.classList.remove('error');
-  }
-
-  state.validationErrors[fieldName] = false;
-}
-
-/**
- * Submit login credentials
- * @param {Object} formData - Form data containing username, password, and rememberMe
- */
-async function submitLogin(formData) {
-  try {
-    // Set submitting state
-    setSubmittingState(true);
-
-    // Simulate API call (replace with actual API endpoint)
-    const response = await mockLoginAPI(formData);
-
-    if (response.success) {
-      handleLoginSuccess(formData);
-    } else {
-      handleLoginError(response.message || 'Login failed. Please try again.');
-    }
-  } catch (error) {
-    handleLoginError('An unexpected error occurred. Please try again later.');
-    console.error('Login error:', error);
-  } finally {
-    setSubmittingState(false);
-  }
-}
-
-/**
- * Mock API call for login (replace with actual API integration)
- * @param {Object} formData - Login credentials
- * @returns {Promise<Object>} - API response
- */
-function mockLoginAPI(formData) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Mock validation - replace with actual API call
-      // Example: fetch('/api/login', { method: 'POST', body: JSON.stringify(formData) })
-
-      // For demo purposes, accept any username with password length >= 6
-      if (formData.password.length >= CONFIG.MIN_PASSWORD_LENGTH) {
-        resolve({
-          success: true,
-          message: 'Login successful!',
-          user: {
-            username: formData.username
-          }
-        });
-      } else {
-        resolve({
-          success: false,
-          message: 'Invalid username or password.'
-        });
-      }
-    }, CONFIG.API_TIMEOUT);
-  });
-}
-
-/**
- * Handle successful login
- * @param {Object} formData - Form data
- */
-function handleLoginSuccess(formData) {
-  // Handle remember me
-  if (formData.rememberMe) {
-    localStorage.setItem(CONFIG.REMEMBER_ME_KEY, formData.username);
-  } else {
-    localStorage.removeItem(CONFIG.REMEMBER_ME_KEY);
-  }
-
-  // Show success message
-  showSuccess('Login successful! Redirecting...');
-
-  // Clear form
-  elements.form.reset();
-
-  // Simulate redirect (replace with actual redirect)
-  setTimeout(() => {
-    // window.location.href = '/dashboard';
-    console.log('Redirecting to dashboard...');
-  }, 1500);
-}
-
-/**
- * Handle login error
- * @param {string} message - Error message
- */
-function handleLoginError(message) {
-  showError(message);
-
-  // Focus on username field for retry
-  elements.usernameInput.focus();
-}
-
-/**
- * Set submitting state (loading)
- * @param {boolean} isSubmitting - Whether form is submitting
- */
-function setSubmittingState(isSubmitting) {
-  state.isSubmitting = isSubmitting;
-
-  if (isSubmitting) {
-    elements.loginBtn.disabled = true;
-    elements.loadingSpinner.classList.add('show');
-    elements.loginBtn.setAttribute('aria-busy', 'true');
-  } else {
-    elements.loginBtn.disabled = false;
-    elements.loadingSpinner.classList.remove('show');
-    elements.loginBtn.setAttribute('aria-busy', 'false');
-  }
-}
-
-/**
- * Show error message
+ * Display error message in the error container
  * @param {string} message - Error message to display
  */
 function showError(message) {
-  hideMessages();
-  elements.errorMessage.textContent = message;
-  elements.errorMessage.classList.add('show');
-  elements.errorMessage.setAttribute('role', 'alert');
-
-  // Announce to screen readers
-  announceToScreenReader(message, 'assertive');
+    if (!elements.errorMessage) return;
+    
+    const messageText = elements.errorMessage.querySelector('.message-text');
+    if (messageText) {
+        messageText.textContent = message;
+    }
+    
+    elements.errorMessage.style.display = 'flex';
+    elements.successMessage.style.display = 'none';
+    
+    // Announce to screen readers
+    elements.errorMessage.setAttribute('aria-live', 'assertive');
+    
+    // Scroll to error message if not visible
+    elements.errorMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 /**
- * Show success message
+ * Display success message in the success container
  * @param {string} message - Success message to display
  */
 function showSuccess(message) {
-  hideMessages();
-  elements.successMessage.textContent = message;
-  elements.successMessage.classList.add('show');
-  elements.successMessage.setAttribute('role', 'status');
-
-  // Announce to screen readers
-  announceToScreenReader(message, 'polite');
+    if (!elements.successMessage) return;
+    
+    const messageText = elements.successMessage.querySelector('.message-text');
+    if (messageText) {
+        messageText.textContent = message;
+    }
+    
+    elements.successMessage.style.display = 'flex';
+    elements.errorMessage.style.display = 'none';
+    
+    // Announce to screen readers
+    elements.successMessage.setAttribute('aria-live', 'polite');
 }
 
 /**
- * Hide all messages
+ * Show loading spinner during API call
  */
-function hideMessages() {
-  elements.errorMessage.classList.remove('show');
-  elements.successMessage.classList.remove('show');
-  elements.errorMessage.textContent = '';
-  elements.successMessage.textContent = '';
+function showLoading() {
+    if (!elements.loginBtn || !elements.loadingSpinner) return;
+    
+    elements.loginBtn.disabled = true;
+    elements.loginBtn.classList.add('loading');
+    elements.loadingSpinner.style.display = 'inline-block';
+    
+    const btnText = elements.loginBtn.querySelector('.btn-text');
+    if (btnText) {
+        btnText.textContent = 'Logging in...';
+    }
+    
+    // Update ARIA attributes
+    elements.loginBtn.setAttribute('aria-busy', 'true');
+    elements.loadingSpinner.setAttribute('aria-hidden', 'false');
 }
 
 /**
- * Toggle password visibility
+ * Hide loading spinner after API response
  */
-function togglePasswordVisibility() {
-  const isPassword = elements.passwordInput.type === 'password';
-
-  if (isPassword) {
-    elements.passwordInput.type = 'text';
-    elements.passwordToggle.innerHTML = '👁️‍🗨️';
-    elements.passwordToggle.setAttribute('aria-label', 'Hide password');
-  } else {
-    elements.passwordInput.type = 'password';
-    elements.passwordToggle.innerHTML = '👁️';
-    elements.passwordToggle.setAttribute('aria-label', 'Show password');
-  }
+function hideLoading() {
+    if (!elements.loginBtn || !elements.loadingSpinner) return;
+    
+    elements.loginBtn.disabled = false;
+    elements.loginBtn.classList.remove('loading');
+    elements.loadingSpinner.style.display = 'none';
+    
+    const btnText = elements.loginBtn.querySelector('.btn-text');
+    if (btnText) {
+        btnText.textContent = 'Login';
+    }
+    
+    // Update ARIA attributes
+    elements.loginBtn.setAttribute('aria-busy', 'false');
+    elements.loadingSpinner.setAttribute('aria-hidden', 'true');
 }
 
 /**
- * Load remembered username from localStorage
+ * Clear all messages (error and success)
  */
-function loadRememberedUsername() {
-  const rememberedUsername = localStorage.getItem(CONFIG.REMEMBER_ME_KEY);
-
-  if (rememberedUsername) {
-    elements.usernameInput.value = rememberedUsername;
-    elements.rememberMeCheckbox.checked = true;
-  }
+function clearMessages() {
+    if (elements.errorMessage) {
+        elements.errorMessage.style.display = 'none';
+    }
+    if (elements.successMessage) {
+        elements.successMessage.style.display = 'none';
+    }
 }
 
 /**
- * Announce message to screen readers
- * @param {string} message - Message to announce
- * @param {string} priority - 'polite' or 'assertive'
+ * Update field-level error message
+ * @param {string} fieldName - Name of the field
+ * @param {string} message - Error message to display
  */
-function announceToScreenReader(message, priority = 'polite') {
-  const announcement = document.createElement('div');
-  announcement.setAttribute('role', 'status');
-  announcement.setAttribute('aria-live', priority);
-  announcement.setAttribute('aria-atomic', 'true');
-  announcement.className = 'sr-only';
-  announcement.textContent = message;
-
-  document.body.appendChild(announcement);
-
-  setTimeout(() => {
-    document.body.removeChild(announcement);
-  }, 1000);
+function updateFieldError(fieldName, message) {
+    const errorElement = elements[`${fieldName}Error`];
+    const inputElement = elements[`${fieldName}Input`];
+    
+    if (!errorElement || !inputElement) return;
+    
+    if (message) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        inputElement.classList.add('error');
+        inputElement.setAttribute('aria-invalid', 'true');
+    } else {
+        errorElement.textContent = '';
+        errorElement.style.display = 'none';
+        inputElement.classList.remove('error');
+        inputElement.setAttribute('aria-invalid', 'false');
+    }
 }
 
-// Export functions for testing
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    validateField,
+/**
+ * Clear all field-level errors
+ */
+function clearFieldErrors() {
+    updateFieldError('username', '');
+    updateFieldError('password', '');
+}
+
+
+
+// ============================================================================
+// RATE LIMITING AND SECURITY
+// ============================================================================
+
+/**
+ * Check if user has exceeded rate limit
+ * @returns {Object} - { isBlocked: boolean, remainingTime: number }
+ */
+function checkRateLimit() {
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastAttemptTime;
+    
+    // Reset if outside the window
+    if (timeSinceLastAttempt > CONFIG.RATE_LIMIT_WINDOW) {
+        loginAttempts = 0;
+        lastAttemptTime = 0;
+        localStorage.removeItem(CONFIG.STORAGE_KEYS.LOGIN_ATTEMPTS);
+        localStorage.removeItem(CONFIG.STORAGE_KEYS.LAST_ATTEMPT_TIME);
+        return { isBlocked: false, remainingTime: 0 };
+    }
+    
+    // Check if exceeded max attempts
+    if (loginAttempts >= CONFIG.MAX_LOGIN_ATTEMPTS) {
+        const remainingTime = CONFIG.RATE_LIMIT_WINDOW - timeSinceLastAttempt;
+        return { isBlocked: true, remainingTime };
+    }
+    
+    return { isBlocked: false, remainingTime: 0 };
+}
+
+/**
+ * Increment login attempt counter
+ */
+function incrementLoginAttempts() {
+    loginAttempts++;
+    lastAttemptTime = Date.now();
+    
+    localStorage.setItem(CONFIG.STORAGE_KEYS.LOGIN_ATTEMPTS, loginAttempts.toString());
+    localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_ATTEMPT_TIME, lastAttemptTime.toString());
+}
+
+/**
+ * Reset login attempts after successful login
+ */
+function resetLoginAttempts() {
+    loginAttempts = 0;
+    lastAttemptTime = 0;
+    localStorage.removeItem(CONFIG.STORAGE_KEYS.LOGIN_ATTEMPTS);
+    localStorage.removeItem(CONFIG.STORAGE_KEYS.LAST_ATTEMPT_TIME);
+}
+
+/**
+ * Format remaining time for display
+ * @param {number} milliseconds - Time in milliseconds
+ * @returns {string} - Formatted time string
+ */
+function formatRemainingTime(milliseconds) {
+    const minutes = Math.ceil(milliseconds / 60000);
+    return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+}
+
+/**
+ * Sanitize input to prevent XSS attacks
+ * @param {string} input - User input to sanitize
+ * @returns {string} - Sanitized input
+ */
+function sanitizeInput(input) {
+    if (typeof input !== 'string') return '';
+    
+    const div = document.createElement('div');
+    div.textContent = input;
+    return div.innerHTML;
+}
+
+
+
+// ============================================================================
+// SESSION MANAGEMENT
+// ============================================================================
+
+/**
+ * Store authentication token in storage
+ * @param {string} token - Authentication token
+ * @param {boolean} remember - Whether to use localStorage (true) or sessionStorage (false)
+ */
+function storeAuthToken(token, remember = false) {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(CONFIG.STORAGE_KEYS.AUTH_TOKEN, token);
+}
+
+/**
+ * Store refresh token in storage
+ * @param {string} token - Refresh token
+ * @param {boolean} remember - Whether to use localStorage (true) or sessionStorage (false)
+ */
+function storeRefreshToken(token, remember = false) {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(CONFIG.STORAGE_KEYS.REFRESH_TOKEN, token);
+}
+
+/**
+ * Store user data in storage
+ * @param {Object} userData - User data object
+ * @param {boolean} remember - Whether to use localStorage (true) or sessionStorage (false)
+ */
+function storeUserData(userData, remember = false) {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(CONFIG.STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+}
+
+/**
+ * Get authentication token from storage
+ * @returns {string|null} - Authentication token or null
+ */
+function getAuthToken() {
+    return localStorage.getItem(CONFIG.STORAGE_KEYS.AUTH_TOKEN) || 
+           sessionStorage.getItem(CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+}
+
+/**
+ * Clear all session data
+ */
+function clearSessionData() {
+    // Clear from both localStorage and sessionStorage
+    const keys = Object.values(CONFIG.STORAGE_KEYS);
+    keys.forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+    });
+}
+
+/**
+ * Check if user is already logged in
+ * @returns {boolean} - True if user has valid token
+ */
+function isUserLoggedIn() {
+    const token = getAuthToken();
+    return token !== null && token !== '';
+}
+
+
+
+// ============================================================================
+// CORE LOGIN FUNCTIONS
+// ============================================================================
+
+/**
+ * Main login handler that prevents default form submission
+ * @param {Event} event - Form submit event
+ */
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    // Prevent multiple simultaneous submissions
+    if (isSubmitting) {
+        return;
+    }
+    
+    // Clear previous messages and errors
+    clearMessages();
+    clearFieldErrors();
+    
+    // Check rate limiting
+    const rateLimitCheck = checkRateLimit();
+    if (rateLimitCheck.isBlocked) {
+        const timeRemaining = formatRemainingTime(rateLimitCheck.remainingTime);
+        showError(`Too many login attempts. Please try again in ${timeRemaining}.`);
+        return;
+    }
+    
+    // Validate form
+    const validation = validateForm();
+    if (!validation.isValid) {
+        // Show field-level errors
+        if (validation.errors.username) {
+            updateFieldError('username', validation.errors.username);
+        }
+        if (validation.errors.password) {
+            updateFieldError('password', validation.errors.password);
+        }
+        
+        // Show general error message
+        showError('Please correct the errors in the form.');
+        return;
+    }
+    
+    // Get form values
+    const username = sanitizeInput(elements.usernameInput.value.trim());
+    const password = elements.passwordInput.value; // Don't sanitize password
+    const rememberMe = elements.rememberMe ? elements.rememberMe.checked : false;
+    
+    // Set submitting flag
+    isSubmitting = true;
+    
+    // Show loading state
+    showLoading();
+    
+    try {
+        // Submit login request
+        const response = await submitLogin(username, password);
+        
+        // Handle successful login
+        await handleLoginSuccess(response, rememberMe);
+        
+    } catch (error) {
+        // Handle login error
+        handleLoginError(error);
+        
+        // Increment failed attempt counter
+        incrementLoginAttempts();
+        
+    } finally {
+        // Reset submitting flag and hide loading
+        isSubmitting = false;
+        hideLoading();
+    }
+}
+
+/**
+ * Make API call to backend login endpoint
+ * @param {string} username - Username or email
+ * @param {string} password - Password
+ * @returns {Promise<Object>} - Response data from server
+ */
+async function submitLogin(username, password) {
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT);
+    
+    try {
+        const response = await fetch(CONFIG.API_ENDPOINTS.LOGIN, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            }),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Parse response
+        const data = await response.json();
+        
+        // Check if response is successful
+        if (!response.ok) {
+            // Throw error with server message or default message
+            const error = new Error(data.message || 'Login failed');
+            error.status = response.status;
+            error.data = data;
+            throw error;
+        }
+        
+        return data;
+        
+    } catch (error) {
+        clearTimeout(timeoutId);
+        
+        // Handle abort (timeout)
+        if (error.name === 'AbortError') {
+            const timeoutError = new Error('Request timeout. Please try again.');
+            timeoutError.status = 408;
+            throw timeoutError;
+        }
+        
+        // Handle network errors
+        if (error instanceof TypeError) {
+            const networkError = new Error('Network error. Please check your connection.');
+            networkError.status = 0;
+            throw networkError;
+        }
+        
+        // Re-throw other errors
+        throw error;
+    }
+}
+
+/**
+ * Process successful login response
+ * @param {Object} response - Response data from server
+ * @param {boolean} rememberMe - Whether to persist session
+ */
+async function handleLoginSuccess(response, rememberMe) {
+    // Reset login attempts
+    resetLoginAttempts();
+    
+    // Store authentication data
+    if (response.token || response.accessToken) {
+        const token = response.token || response.accessToken;
+        storeAuthToken(token, rememberMe);
+    }
+    
+    if (response.refreshToken) {
+        storeRefreshToken(response.refreshToken, rememberMe);
+    }
+    
+    if (response.user || response.userData) {
+        const userData = response.user || response.userData;
+        storeUserData(userData, rememberMe);
+    }
+    
+    // Store remember me preference
+    if (rememberMe) {
+        localStorage.setItem(CONFIG.STORAGE_KEYS.REMEMBER_ME, 'true');
+    }
+    
+    // Show success message
+    showSuccess('Login successful! Redirecting...');
+    
+    // Clear password field for security
+    elements.passwordInput.value = '';
+    
+    // Redirect after short delay
+    setTimeout(() => {
+        window.location.href = CONFIG.REDIRECT_URLS.SUCCESS;
+    }, CONFIG.SUCCESS_MESSAGE_DURATION);
+}
+
+/**
+ * Process login failures and display appropriate messages
+ * @param {Error} error - Error object from failed login
+ */
+function handleLoginError(error) {
+    let errorMessage = 'An error occurred during login. Please try again.';
+    
+    // Handle different error types
+    if (error.status === 401) {
+        errorMessage = 'Invalid username or password. Please try again.';
+    } else if (error.status === 400) {
+        errorMessage = error.message || 'Invalid request. Please check your input.';
+    } else if (error.status === 403) {
+        errorMessage = 'Account is locked or suspended. Please contact support.';
+    } else if (error.status === 429) {
+        errorMessage = 'Too many requests. Please try again later.';
+    } else if (error.status === 500 || error.status === 502 || error.status === 503) {
+        errorMessage = 'Server error. Please try again later.';
+    } else if (error.status === 0) {
+        errorMessage = 'Network error. Please check your internet connection.';
+    } else if (error.status === 408) {
+        errorMessage = error.message;
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
+    
+    // Show error message
+    showError(errorMessage);
+    
+    // Clear password field after failed attempt
+    if (elements.passwordInput) {
+        elements.passwordInput.value = '';
+        elements.passwordInput.focus();
+    }
+    
+    // Log error for debugging (remove in production)
+    console.error('Login error:', error);
+}
+
+
+
+// ============================================================================
+// EVENT HANDLERS
+// ============================================================================
+
+/**
+ * Handle password visibility toggle
+ */
+function handlePasswordToggle() {
+    if (!elements.passwordInput || !elements.togglePassword) return;
+    
+    const type = elements.passwordInput.type === 'password' ? 'text' : 'password';
+    elements.passwordInput.type = type;
+    
+    // Update button text/icon
+    const eyeIcon = elements.togglePassword.querySelector('.eye-icon');
+    if (eyeIcon) {
+        eyeIcon.textContent = type === 'password' ? '👁' : '🙈';
+    }
+    
+    // Update ARIA label
+    elements.togglePassword.setAttribute(
+        'aria-label',
+        type === 'password' ? 'Show password' : 'Hide password'
+    );
+}
+
+/**
+ * Handle input field focus - clear field errors
+ * @param {string} fieldName - Name of the field
+ */
+function handleFieldFocus(fieldName) {
+    updateFieldError(fieldName, '');
+}
+
+/**
+ * Handle input field blur - validate field
+ * @param {string} fieldName - Name of the field
+ */
+function handleFieldBlur(fieldName) {
+    const value = elements[`${fieldName}Input`].value;
+    
+    // Only validate if field has value
+    if (value && value.trim() !== '') {
+        validateField(fieldName);
+    }
+}
+
+/**
+ * Handle Enter key press in form fields
+ * @param {KeyboardEvent} event - Keyboard event
+ */
+function handleEnterKey(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        elements.loginForm.dispatchEvent(new Event('submit'));
+    }
+}
+
+/**
+ * Clear messages when user starts typing
+ */
+function handleInputChange() {
+    clearMessages();
+}
+
+
+
+// ============================================================================
+// INITIALIZATION AND EVENT LISTENERS
+// ============================================================================
+
+/**
+ * Initialize DOM elements
+ */
+function initializeElements() {
+    elements.loginForm = document.getElementById('loginForm');
+    elements.usernameInput = document.getElementById('username');
+    elements.passwordInput = document.getElementById('password');
+    elements.loginBtn = document.getElementById('loginBtn');
+    elements.loadingSpinner = document.getElementById('loadingSpinner');
+    elements.errorMessage = document.getElementById('errorMessage');
+    elements.successMessage = document.getElementById('successMessage');
+    elements.usernameError = document.getElementById('usernameError');
+    elements.passwordError = document.getElementById('passwordError');
+    elements.togglePassword = document.getElementById('togglePassword');
+    elements.rememberMe = document.getElementById('rememberMe');
+}
+
+/**
+ * Attach event listeners to form elements
+ */
+function attachEventListeners() {
+    // Form submit event
+    if (elements.loginForm) {
+        elements.loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    // Username field events
+    if (elements.usernameInput) {
+        elements.usernameInput.addEventListener('blur', () => handleFieldBlur('username'));
+        elements.usernameInput.addEventListener('focus', () => handleFieldFocus('username'));
+        elements.usernameInput.addEventListener('input', handleInputChange);
+        elements.usernameInput.addEventListener('keypress', handleEnterKey);
+    }
+    
+    // Password field events
+    if (elements.passwordInput) {
+        elements.passwordInput.addEventListener('blur', () => handleFieldBlur('password'));
+        elements.passwordInput.addEventListener('focus', () => handleFieldFocus('password'));
+        elements.passwordInput.addEventListener('input', handleInputChange);
+        elements.passwordInput.addEventListener('keypress', handleEnterKey);
+    }
+    
+    // Password toggle button
+    if (elements.togglePassword) {
+        elements.togglePassword.addEventListener('click', handlePasswordToggle);
+    }
+    
+    // Prevent form submission on Enter in toggle button
+    if (elements.togglePassword) {
+        elements.togglePassword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handlePasswordToggle();
+            }
+        });
+    }
+}
+
+/**
+ * Check if user is already logged in and redirect
+ */
+function checkExistingSession() {
+    if (isUserLoggedIn()) {
+        // User is already logged in, redirect to dashboard
+        window.location.href = CONFIG.REDIRECT_URLS.SUCCESS;
+    }
+}
+
+/**
+ * Restore remember me state
+ */
+function restoreRememberMeState() {
+    if (elements.rememberMe) {
+        const rememberMeValue = localStorage.getItem(CONFIG.STORAGE_KEYS.REMEMBER_ME);
+        if (rememberMeValue === 'true') {
+            elements.rememberMe.checked = true;
+        }
+    }
+}
+
+/**
+ * Initialize the login page
+ */
+function initialize() {
+    // Initialize DOM elements
+    initializeElements();
+    
+    // Check for missing required elements
+    if (!elements.loginForm || !elements.usernameInput || !elements.passwordInput) {
+        console.error('Required form elements not found');
+        return;
+    }
+    
+    // Initialize rate limiting
+    initializeRateLimiting();
+    
+    // Check existing session
+    checkExistingSession();
+    
+    // Restore remember me state
+    restoreRememberMeState();
+    
+    // Attach event listeners
+    attachEventListeners();
+    
+    // Focus on username field
+    if (elements.usernameInput) {
+        elements.usernameInput.focus();
+    }
+    
+    console.log('Login page initialized successfully');
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    // DOM is already ready
+    initialize();
+}
+
+// ============================================================================
+// EXPORT FOR TESTING (if using modules)
+// ============================================================================
+
+// Uncomment if using ES6 modules
+/*
+export {
+    validateEmail,
+    validatePassword,
     validateForm,
     showError,
     showSuccess,
-    hideMessages,
-    togglePasswordVisibility,
-    handleFormSubmit,
-    CONFIG
-  };
-}
+    showLoading,
+    hideLoading,
+    handleLogin,
+    submitLogin,
+    handleLoginSuccess,
+    handleLoginError
+};
+*/
 
