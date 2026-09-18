@@ -4,15 +4,19 @@
   "description": "Indian Bank Login Page with comprehensive test suite",
   "main": "src/main/webapp/js/login.js",
   "scripts": {
-    "test": "jest --verbose --coverage",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --coverageReporters=text --coverageReporters=html"
+    "test": "jest --verbose --coverage --no-colors",
+    "test:watch": "jest --watch --no-colors",
+    "test:coverage": "jest --coverage --coverageReporters=text --coverageReporters=html --no-colors",
+    "test:main": "jest src/test/javascript/login.test.js --verbose --no-colors",
+    "test:all": "jest --verbose --no-colors"
   },
   "keywords": [
     "login",
     "authentication",
     "banking",
-    "indian-bank"
+    "indian-bank",
+    "ui-testing",
+    "jest"
   ],
   "author": "Indian Bank Development Team",
   "license": "ISC",
@@ -26,13 +30,16 @@
     "coverageDirectory": "coverage",
     "collectCoverageFrom": [
       "src/main/webapp/js/**/*.js",
-      "!src/main/webapp/js/**/*.test.js"
+      "!src/main/webapp/js/**/*.test.js",
+      "!src/test/**/*.js"
     ],
     "testMatch": [
-      "**/src/main/webapp/js/**/*.test.js"
+      "**/src/main/webapp/js/**/*.test.js",
+      "**/src/test/javascript/**/*.test.js"
     ],
     "setupFilesAfterEnv": [],
-    "verbose": true
+    "verbose": true,
+    "testTimeout": 10000
   }
 }
 
