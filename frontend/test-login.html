@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login UI Test Cases</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1e40af;
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3b82f6;
+            margin-top: 0;
+        }
+        .test-case {
+            background: #f9fafb;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #3b82f6;
+            border-radius: 4px;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #1f2937;
+        }
+        .test-steps {
+            margin: 10px 0;
+        }
+        .test-steps li {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+        .expected-result {
+            background: #dbeafe;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #3b82f6;
+        }
+        .expected-result strong {
+            color: #1e40af;
+        }
+        .demo-credentials {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            margin: 20px 0;
+        }
+        .demo-credentials h3 {
+            margin-top: 0;
+            color: #92400e;
+        }
+        .credential-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .feature-list {
+            background: #d1fae5;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+        }
+        .feature-list h3 {
+            margin-top: 0;
+            color: #065f46;
+        }
+        .feature-list ul {
+            margin: 10px 0;
+        }
+        .feature-list li {
+            margin: 5px 0;
+        }
+        .btn-test {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        .btn-test:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Indian Bank Login UI - Test Cases Documentation</h1>
+
+    <div class="demo-credentials">
+        <h3>🔑 Demo Credentials for Testing</h3>
+        <div class="credential-item">
+            <strong>Email Login:</strong> demo@indianbank.com | <strong>Password:</strong> Demo@123
+        </div>
+        <div class="credential-item">
+            <strong>Username Login:</strong> admin | <strong>Password:</strong> Admin@123
+        </div>
+    </div>
+
+    <div class="feature-list">
+        <h3>✨ Implemented Features</h3>
+        <ul>
+            <li>✅ Real-time form validation with error messages</li>
+            <li>✅ Username/Email validation (min 3 chars, valid format)</li>
+            <li>✅ Password validation (min 6 chars)</li>
+            <li>✅ Password visibility toggle</li>
+            <li>✅ Remember Me functionality (localStorage)</li>
+            <li>✅ Loading state during login</li>
+            <li>✅ Simulated authentication with demo credentials</li>
+            <li>✅ Accessibility features (ARIA labels, keyboard navigation)</li>
+            <li>✅ Responsive design for all devices</li>
+            <li>✅ Input field blur validation</li>
+            <li>✅ Clear error messages on input change</li>
+        </ul>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 1: Valid Login with Email</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that a user can successfully login with valid email and password</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter email: <code>demo@indianbank.com</code></li>
+                <li>Enter password: <code>Demo@123</code></li>
+                <li>Click the "Login" button</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Loading spinner appears on the button</li>
+                    <li>Form fields are disabled during submission</li>
+                    <li>After ~1.5 seconds, success message appears in green</li>
+                    <li>Alert shows "Login successful! Redirecting to dashboard..."</li>
+                    <li>Form is reset after successful login</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 2: Valid Login with Username</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that a user can successfully login with valid username and password</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter username: <code>admin</code></li>
+                <li>Enter password: <code>Admin@123</code></li>
+                <li>Click the "Login" button</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Login process completes successfully</li>
+                    <li>Success message is displayed</li>
+                    <li>User is notified of successful authentication</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 3: Invalid Credentials</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that appropriate error message is shown for invalid credentials</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter username: <code>wronguser@test.com</code></li>
+                <li>Enter password: <code>wrongpass</code></li>
+                <li>Click the "Login" button</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Error message appears: "Invalid username or password. Please try again."</li>
+                    <li>Error message is displayed in red color</li>
+                    <li>Form remains filled with entered values</li>
+                    <li>User can retry with correct credentials</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 4: Empty Form Submission</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that validation errors appear when submitting empty form</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Leave both username and password fields empty</li>
+                <li>Click the "Login" button</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Error message under username: "Username or email is required"</li>
+                    <li>Error message under password: "Password is required"</li>
+                    <li>Both input fields get red border (error state)</li>
+                    <li>Form is not submitted</li>
+                    <li>No loading state is triggered</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 5: Username Too Short</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify validation for username minimum length requirement</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter username: <code>ab</code> (only 2 characters)</li>
+                <li>Enter password: <code>Test@123</code></li>
+                <li>Click the "Login" button</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Error message appears: "Username must be at least 3 characters"</li>
+                    <li>Username field shows error state (red border)</li>
+                    <li>Form is not submitted</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 6: Password Too Short</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify validation for password minimum length requirement</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter username: <code>testuser</code></li>
+                <li>Enter password: <code>12345</code> (only 5 characters)</li>
+                <li>Click the "Login" button</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Error message appears: "Password must be at least 6 characters"</li>
+                    <li>Password field shows error state (red border)</li>
+                    <li>Form is not submitted</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 7: Invalid Email Format</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify validation for invalid email format</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter username: <code>invalidemail@</code> (invalid email)</li>
+                <li>Enter password: <code>Test@123</code></li>
+                <li>Click the "Login" button</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Error message appears: "Please enter a valid username or email address"</li>
+                    <li>Username field shows error state</li>
+                    <li>Form is not submitted</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 8: Password Visibility Toggle</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that password visibility can be toggled</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter password: <code>MyPassword123</code></li>
+                <li>Observe that password is masked (shown as dots/asterisks)</li>
+                <li>Click the eye icon button next to password field</li>
+                <li>Observe the password becomes visible</li>
+                <li>Click the eye icon button again</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Initially, password is masked</li>
+                    <li>After first click, password text is visible</li>
+                    <li>Eye icon changes to indicate visibility state</li>
+                    <li>After second click, password is masked again</li>
+                    <li>ARIA label updates appropriately</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 9: Remember Me Functionality</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that "Remember Me" saves username in localStorage</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Enter username: <code>demo@indianbank.com</code></li>
+                <li>Enter password: <code>Demo@123</code></li>
+                <li>Check the "Remember me" checkbox</li>
+                <li>Click "Login" button</li>
+                <li>After successful login, refresh the page</li>
+                <li>Observe the username field</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>After refresh, username field is pre-filled with saved username</li>
+                    <li>"Remember me" checkbox is checked</li>
+                    <li>Password field remains empty (for security)</li>
+                    <li>Data persists across browser sessions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 10: Real-time Validation on Blur</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that validation occurs when user leaves a field (blur event)</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Click in the username field</li>
+                <li>Type: <code>ab</code> (too short)</li>
+                <li>Click outside the username field (or press Tab)</li>
+                <li>Observe the validation message</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Error message appears immediately after blur</li>
+                    <li>Field shows error state (red border)</li>
+                    <li>User gets instant feedback without submitting form</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 11: Error Clearing on Input</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that error messages clear when user starts typing</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Click "Login" button without entering anything (to trigger errors)</li>
+                <li>Observe error messages appear</li>
+                <li>Start typing in the username field</li>
+                <li>Observe the username error message</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Error message disappears as soon as user starts typing</li>
+                    <li>Red border is removed from the field</li>
+                    <li>Provides better user experience</li>
+                    <li>Each field's error clears independently</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 12: Keyboard Navigation</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that form can be navigated and submitted using keyboard only</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Press Tab to focus on username field</li>
+                <li>Type username: <code>admin</code></li>
+                <li>Press Tab to move to password field</li>
+                <li>Type password: <code>Admin@123</code></li>
+                <li>Press Enter key</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Tab key moves focus between fields</li>
+                    <li>Visual focus indicators are visible</li>
+                    <li>Enter key submits the form</li>
+                    <li>All interactive elements are keyboard accessible</li>
+                    <li>Login process completes successfully</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 13: Forgot Password Link</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that "Forgot Password" link shows appropriate message</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Click on "Forgot Password?" link</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Alert message appears</li>
+                    <li>Message indicates feature will be implemented soon</li>
+                    <li>Suggests contacting bank administrator</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 14: Sign Up Link</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that "Sign Up" link shows appropriate message</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Click on "Sign Up" link at the bottom</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Alert message appears</li>
+                    <li>Message indicates feature will be implemented soon</li>
+                    <li>Suggests visiting nearest bank branch</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Case 15: Responsive Design - Mobile View</h2>
+        <div class="test-case">
+            <h3>Objective</h3>
+            <p>Verify that login page is responsive and works on mobile devices</p>
+            
+            <h3>Test Steps</h3>
+            <ol class="test-steps">
+                <li>Open the login page (index.html)</li>
+                <li>Open browser developer tools (F12)</li>
+                <li>Toggle device toolbar (Ctrl+Shift+M)</li>
+                <li>Select mobile device (e.g., iPhone 12, Samsung Galaxy)</li>
+                <li>Test all functionality on mobile view</li>
+            </ol>
+            
+            <div class="expected-result">
+                <strong>Expected Result:</strong>
+                <ul>
+                    <li>Layout adapts to mobile screen size</li>
+                    <li>All elements are properly sized and readable</li>
+                    <li>Touch targets are appropriately sized</li>
+                    <li>No horizontal scrolling required</li>
+                    <li>All functionality works on mobile</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <a href="index.html" class="btn-test">🚀 Open Login Page to Test</a>
+
+    <div style="margin-top: 40px; padding: 20px; background: #f3f4f6; border-radius: 8px;">
+        <h3>📝 Testing Notes</h3>
+        <ul>
+            <li>All test cases should be executed in a modern browser (Chrome, Firefox, Safari, Edge)</li>
+            <li>Check browser console for any JavaScript errors</li>
+            <li>Verify that all ARIA attributes are properly set for accessibility</li>
+            <li>Test with screen readers if possible (NVDA, JAWS, VoiceOver)</li>
+            <li>Verify localStorage functionality in browser DevTools → Application → Local Storage</li>
+            <li>Test on different screen sizes and orientations</li>
+        </ul>
+    </div>
+</body>
+</html>
+
